@@ -7,10 +7,15 @@ const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true })
 // mapping: timeslice => cache key => cache value
 let table = {};
 
+let clients = {};
+
 socket.on('message', (msg, rinfo) =>
 {
     console.log(`socket got: ${msg} from ${rinfo.address}:${rinfo.port}`);
 
+    if (clients[rinfo.address] === undefined)
+        clients[rinfo.address] = true;
+    
     const timeslice_curr = Math.floor((+new Date())/cache_time);
 
     // first side is the key, second side is the value (if any) 
@@ -25,7 +30,9 @@ socket.on('message', (msg, rinfo) =>
         console.log("setting value: " + msg[0] + ' => ' + msg[1]);
         table[timeslice_curr][msg[0]] = msg[1];
         const outmsg = msg[0] + '<><><>' + msg[1];
-        socket.send(outmsg, 0, outmsg.length, return_port, rinfo.address);
+
+        for (let client in clients)
+            socket.send(outmsg, 0, outmsg.length, return_port, client);
     }
     else
     {
